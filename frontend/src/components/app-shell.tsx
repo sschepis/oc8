@@ -672,8 +672,18 @@ export function AppShell() {
             className="h-9 w-auto shrink-0 select-none"
             draggable={false}
           />
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             <span>{t("Control Panel", "Leitstand")}</span>
+            <a
+              href="https://github.com/sschepis/oc8/tree/theta-instruments"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Theta Instruments fork of oc8 on GitHub"
+              className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] tracking-[0.14em] text-primary transition hover:bg-primary/20"
+            >
+              <GitBranch className="h-2.5 w-2.5" aria-hidden="true" />
+              {t("Theta fork", "Theta-Fork")}
+            </a>
           </div>
         </div>
 
@@ -726,6 +736,16 @@ export function AppShell() {
           <div className="min-w-[12rem] flex-1">
             <h1 className="font-serif text-2xl leading-none md:text-3xl">{pageTitle(pathname)}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{pageSubtitle(pathname)}</p>
+            <a
+              href="https://github.com/sschepis/oc8/tree/theta-instruments"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Theta Instruments fork of oc8 on GitHub"
+              className="mt-2 inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.14em] text-primary transition hover:bg-primary/20 md:hidden"
+            >
+              <GitBranch className="h-2.5 w-2.5" aria-hidden="true" />
+              {t("Theta fork", "Theta-Fork")}
+            </a>
           </div>
           <GlobalSearch />
           <button
