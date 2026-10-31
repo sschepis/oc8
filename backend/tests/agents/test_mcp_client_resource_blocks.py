@@ -75,8 +75,9 @@ def test_large_embedded_text_is_clipped_with_a_marker() -> None:
     block = SimpleNamespace(resource=SimpleNamespace(text=body, uri="repo://big"))
     result = _content_block_text(block)
     assert result is not None
-    assert len(result) < len(body)
+    assert result.startswith(body[:_MAX_RESOURCE_CHARS])
     assert "truncated" in result
+    assert str(len(body)) in result
 
 
 def test_unknown_block_is_ignored() -> None:
