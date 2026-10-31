@@ -19,6 +19,16 @@ class Settings(BaseSettings):
 
     env: str = "dev"
 
+    # Project workspace. The tenant's primary repository and the answer to
+    # "the project" for every agent. Set once per deployment; injected into
+    # every run's preamble so no agent has to be told again. Empty means this
+    # deployment is not project-scoped and the section is omitted.
+    project_name: str = ""
+    project_repo: str = ""
+    project_branch: str = "main"
+    project_root: str = ""
+    project_description: str = ""
+
     # Demo mode: load the full ACME showcase seed (agents, departments, tasks,
     # approvals, bilingual EN/DE presentation) so a fresh stack can be walked
     # through as a product demo. Prefer OC8_ENV=prod + compose.demo.yml for a

@@ -33,6 +33,7 @@ from oc8.authz.permissions import (
     VIEW,
     perm,
 )
+from oc8.config import Settings, get_settings
 from oc8.knowledge.retrieval import granted_kb_ids, retrieve_kb_context
 from oc8.memory.router import retrieve_context
 from oc8.modelrouter import NeutralMessage
@@ -74,6 +75,52 @@ def system_prompt(agent: m.Agent) -> str:
             "if the conversation already has prior turns."
         )
     return "\n\n".join(parts)
+
+
+def project_context_block(settings: Settings) -> str | None:
+    """The tenant's primary project, stated once for every agent run.
+
+    The user should not have to explain "the project" to each agent, or
+    pre-assign the file tool it implies. This block names the repository,
+    branch and local workspace, and states that the user's request is the
+    authorization to work in it. Empty when the deployment is not
+    project-scoped.
+    """
+    name = (settings.project_name or "").strip()
+    repo = (settings.project_repo or "").strip()
+    if not name and not repo:
+        return None
+
+    branch = (settings.project_branch or "main").strip()
+    lines = ["## Project workspace"]
+    if name:
+        lines.append(f"You are working in **{name}**.")
+    if repo:
+        lines.append(
+            f"The primary repository is `{repo}` on branch `{branch}`. "
+            'When the user says "the project", they mean this repository.'
+        )
+    if settings.project_description:
+        lines.append(settings.project_description.strip())
+    if settings.project_root:
+        lines.append(
+            f"The operator's local checkout is `{settings.project_root}`. "
+            "Prefer the GitHub repository as the source of truth unless a "
+            "project filesystem tool is available."
+        )
+    lines.append(
+        "The user's request is the authorization to work in this project. If "
+        "the user asks you to do something in a project file, use the project's "
+        "file/GitHub tools even if that tool was not previously assigned to "
+        "your department or agent. Do not ask the user to assign a tool they "
+        "just asked you to use."
+    )
+    lines.append(
+        "For changes, create a branch and open a pull request. Never delete a "
+        "file, merge a pull request, or push directly to the default branch. "
+        "Keep changes scoped to this repository."
+    )
+    return "\n\n".join(lines)
 
 
 @dataclass
@@ -248,6 +295,10 @@ async def build_run_preamble(
     # the half that holds without the model's cooperation is the blast-radius
     # limit in agent/blast_radius.py.
     messages.append(NeutralMessage(role="system", content=PROVENANCE_RULE))
+
+    project_block = project_context_block(get_settings())
+    if project_block:
+        messages.append(NeutralMessage(role="system", content=project_block))
 
     memory_ctx = await retrieve_context(
         db, agent=agent, tenant_id=tenant_id, frame=frame, query_text=task_text
