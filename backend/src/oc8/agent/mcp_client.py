@@ -3,6 +3,8 @@ an agent run, exposes its tools as neutral schemas, and invokes them."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import datetime as dt
 import logging
 import os
@@ -232,6 +234,92 @@ def _schema_of(tool: Any) -> dict[str, Any]:
     return schema or {"type": "object", "properties": {}}
 
 
+#: A single embedded file can be larger than the model's whole context. Keep the
+#: useful head and say so, rather than silently dropping the block (the bug this
+#: helper exists to fix) or flooding the run with megabytes. 60k chars is roughly
+#: 15k tokens; the agent can ask for another file or a narrower section.
+_MAX_RESOURCE_CHARS = 60_000
+_TEXTUAL_MIME_PREFIXES = (
+    "text/",
+    "application/json",
+    "application/xml",
+    "application/yaml",
+    "application/x-yaml",
+    "application/javascript",
+    "application/sql",
+    "image/svg+xml",
+)
+
+
+def _clip_resource_text(text: str) -> str:
+    if len(text) <= _MAX_RESOURCE_CHARS:
+        return text
+    return (
+        text[:_MAX_RESOURCE_CHARS]
+        + f"\n\n[truncated: {len(text)} characters total, showing the first "
+        f"{_MAX_RESOURCE_CHARS}]"
+    )
+
+
+def _content_block_text(block: Any) -> str | None:
+    """Text from any MCP content block, including embedded resources.
+
+    The SDK's `TextContent` is not the only way a server returns a file.
+    GitHub's official server sends a short `TextContent` summary plus an
+    `EmbeddedResource` carrying the actual file body. Reading only `.text`
+    dropped the body and left the model with "successfully downloaded text
+    file (SHA: ...)" -- no content. Handle embedded text/blob and resource
+    links too, so file tools work rather than merely reporting that a file
+    exists.
+    """
+    text = getattr(block, "text", None)
+    if isinstance(text, str):
+        return text
+
+    resource = getattr(block, "resource", None)
+    if resource is not None:
+        resource_text = getattr(resource, "text", None)
+        if isinstance(resource_text, str):
+            return _clip_resource_text(resource_text)
+        blob = getattr(resource, "blob", None)
+        uri = getattr(resource, "uri", None) or "unknown"
+        mime = (
+            getattr(resource, "mime_type", None)
+            or getattr(resource, "mimeType", None)
+            or ""
+        )
+        if isinstance(blob, str):
+            if mime.startswith(_TEXTUAL_MIME_PREFIXES):
+                try:
+                    decoded = base64.b64decode(blob).decode("utf-8", errors="replace")
+                except (binascii.Error, ValueError):
+                    decoded = None
+                if decoded is not None:
+                    return _clip_resource_text(decoded)
+            return (
+                f"[binary resource: {uri} ({mime or 'unknown mime'}, "
+                f"{len(blob)} base64 chars)]"
+            )
+        return f"[resource: {uri} ({mime or 'unknown mime'})]"
+
+    uri = getattr(block, "uri", None)
+    if isinstance(uri, str):
+        name = getattr(block, "name", None) or uri
+        mime = (
+            getattr(block, "mime_type", None)
+            or getattr(block, "mimeType", None)
+            or ""
+        )
+        suffix = f", {mime}" if mime else ""
+        return f"[resource link: {name} ({uri}{suffix})]"
+
+    data = getattr(block, "data", None)
+    mime = getattr(block, "mime_type", None) or getattr(block, "mimeType", None)
+    if data is not None and mime:
+        return f"[image/attachment: {mime}, {len(str(data))} base64 chars]"
+    return None
+
+
 class McpSession:
     def __init__(
         self,
@@ -338,9 +426,25 @@ class McpSession:
         if self._session is None:
             raise RuntimeError("MCP session not started")
         result = await self._session.call_tool(name, arguments)
+        content = list(result.content)
+        # GitHub's server pairs a generic "successfully downloaded text file"
+        # summary with the EmbeddedResource that actually holds the body. Keep
+        # the body and drop the redundant summary; otherwise it crowds the
+        # model with a SHA and no content.
+        has_embedded_text = any(
+            isinstance(getattr(getattr(block, "resource", None), "text", None), str)
+            for block in content
+        )
         parts: list[str] = []
-        for block in result.content:
-            text = getattr(block, "text", None)
+        for block in content:
+            block_text = getattr(block, "text", None)
+            if (
+                has_embedded_text
+                and isinstance(block_text, str)
+                and block_text.startswith("successfully downloaded")
+            ):
+                continue
+            text = _content_block_text(block)
             if text is not None:
                 parts.append(text)
         text = "\n".join(parts) if parts else "(no output)"
