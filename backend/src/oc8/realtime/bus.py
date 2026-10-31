@@ -21,7 +21,7 @@ from oc8.realtime.envelope import build_envelope
 logger = logging.getLogger(__name__)
 
 #: Shown when an approval carries no title of its own.
-DEFAULT_PUSH_TITLE = "Neue Freigabe angefordert"
+DEFAULT_PUSH_TITLE = "New approval requested"
 
 
 def channel_for(tenant_id: uuid.UUID) -> str:

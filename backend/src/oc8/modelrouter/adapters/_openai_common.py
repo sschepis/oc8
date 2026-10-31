@@ -149,16 +149,29 @@ def to_openai_messages(messages: list[NeutralMessage]) -> list[dict[str, Any]]:
 
 #: Keys this adapter always sets itself. An operator-supplied `extra` key
 #: matching one of these is dropped rather than applied -- see build_payload.
-_RESERVED_PAYLOAD_KEYS = frozenset({"model", "messages", "temperature", "max_tokens", "tools"})
+_RESERVED_PAYLOAD_KEYS = frozenset(
+    {"model", "messages", "temperature", "max_tokens", "max_completion_tokens", "tools"}
+)
+
+
+def _is_reasoning_model(model: str) -> bool:
+    """GPT-5 and the o-series reject max_tokens and a custom temperature."""
+    name = model.lower()
+    return name.startswith(("gpt-5", "o1", "o3", "o4"))
 
 
 def build_payload(req: CompletionRequest) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "model": req.model,
         "messages": to_openai_messages(req.messages),
-        "temperature": req.params.temperature,
-        "max_tokens": req.params.max_tokens,
     }
+    if _is_reasoning_model(req.model):
+        # GPT-5/o-series: no custom temperature, and the completion budget is
+        # max_completion_tokens. Sending max_tokens returns a 400.
+        payload["max_completion_tokens"] = req.params.max_tokens
+    else:
+        payload["temperature"] = req.params.temperature
+        payload["max_tokens"] = req.params.max_tokens
     if req.tools:
         payload["tools"] = [
             {

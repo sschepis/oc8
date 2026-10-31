@@ -39,31 +39,30 @@ def instruction_for(approval: m.ApprovalRequest, *, decision: str, reason: str) 
     no memory of having asked.
     """
     lines = [
-        "Ein Mensch hat eine Entscheidung getroffen, um die du gebeten hattest. "
-        "Setze sie jetzt um.",
+        "A human has made the decision you asked for. Carry it out now.",
         "",
-        f"DEINE FRAGE WAR: {approval.title}",
+        f"YOUR QUESTION WAS: {approval.title}",
     ]
     if approval.detail:
-        lines += ["", f"WORUM ES GING: {approval.detail}"]
+        lines += ["", f"WHAT IT WAS ABOUT: {approval.detail}"]
 
     chosen = option_labels(approval).get(approval.decision_option or "")
     if decision == "reject":
-        lines += ["", "ENTSCHEIDUNG: ABGELEHNT — führe die vorgeschlagene Aktion NICHT aus."]
+        lines += ["", "DECISION: REJECTED — do NOT perform the proposed action."]
     elif chosen is not None:
         detail = f" ({chosen['detail']})" if chosen.get("detail") else ""
-        lines += ["", f"ENTSCHEIDUNG: {chosen['label']}{detail}"]
+        lines += ["", f"DECISION: {chosen['label']}{detail}"]
     else:
-        lines += ["", "ENTSCHEIDUNG: FREIGEGEBEN."]
+        lines += ["", "DECISION: APPROVED."]
     if reason:
         # Last, so it overrides a chosen option it contradicts: a human who
         # writes an instruction means it more than a button they also pressed.
-        lines += ["", f"VORGABE DES MENSCHEN (geht allem anderen vor): {reason}"]
+        lines += ["", f"HUMAN INSTRUCTION (overrides everything else): {reason}"]
 
     lines += [
         "",
-        "Führe genau das aus und informiere danach den Kunden im Chatter. "
-        "Wiederhole keine Schritte, die du damals schon erledigt hattest.",
+        "Carry out exactly that and then inform the customer in the chat. "
+        "Do not repeat steps you already completed.",
     ]
     return "\n".join(lines)
 

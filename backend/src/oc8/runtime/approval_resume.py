@@ -94,21 +94,20 @@ def resume_instruction(entries: list[dict[str, Any]]) -> str:
     approved = [e for e in entries if e.get("decision") == "approve"]
     rejected = [e for e in entries if e.get("decision") == "reject"]
     lines: list[str] = [
-        "Fortsetzung nach Freigabe. Eine oder mehrere Aktionen wurden von einem "
-        "Menschen entschieden. Wiederhole KEINE vorherigen Schritte (keine erneute "
-        "Suche, keine erneuten Notizen)."
+        "Continuation after approval. One or more actions were decided by a human. "
+        "Do NOT repeat earlier steps (no repeated search, no repeated notes)."
     ]
     for e in approved:
         lines.append(
-            f"FREIGEGEBEN — führe genau diese Aktion jetzt aus: "
-            f"{e['tool']} mit {json.dumps(e['arguments'], ensure_ascii=False)}"
+            f"APPROVED — perform exactly this action now: "
+            f"{e['tool']} with {json.dumps(e['arguments'], ensure_ascii=False)}"
         )
     for e in rejected:
         lines.append(
-            f"ABGELEHNT — führe diese Aktion NICHT aus: "
-            f"{e['tool']} mit {json.dumps(e['arguments'], ensure_ascii=False)}"
+            f"REJECTED — do NOT perform this action: "
+            f"{e['tool']} with {json.dumps(e['arguments'], ensure_ascii=False)}"
         )
-    lines.append("Fasse danach in 1-2 Sätzen zusammen und rufe keine weiteren Tools auf.")
+    lines.append("Then summarize in 1-2 sentences and do not call more tools.")
     return "\n".join(lines)
 
 

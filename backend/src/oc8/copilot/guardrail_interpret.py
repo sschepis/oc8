@@ -139,24 +139,23 @@ def _build_prompt(
     *, connection_name: str, function: str, definition: str, attributes: list[GuardrailAttribute]
 ) -> str:
     prompt = (
-        "Ein Operator beschreibt in Freitext eine Guardrail für das Tool "
-        f"'{function}' auf der Verbindung '{connection_name}':\n\n"
+        "An operator describes a guardrail in free text for the tool "
+        f"'{function}' on connection '{connection_name}':\n\n"
         f'"{definition}"\n\n'
-        "Ordne das der einen passenden Regelform zu, indem du "
-        "set_guardrail_interpretation genau einmal aufrufst."
+        "Map it to the one matching rule shape by calling "
+        "set_guardrail_interpretation exactly once."
     )
     if attributes:
         catalog = ", ".join(f"{a.key} ({a.datatype})" for a in attributes)
         prompt += (
-            f" Für 'with_limits' stehen ausschließlich diese Attribute zur "
-            f"Verfügung: {catalog}. Erfinde kein anderes Attribut."
+            f" For 'with_limits' only these attributes are available: "
+            f"{catalog}. Do not invent another attribute."
         )
     else:
         prompt += (
-            " Diese Funktion deklariert keine vergleichbaren Attribute -- "
-            "'with_limits' kann daher nicht verwendet werden, selbst wenn die "
-            "Definition eine Zahl nennt; wähle stattdessen 'approval_required' "
-            "oder 'not_allowed'."
+            " This function declares no comparable attributes -- 'with_limits' "
+            "cannot be used, even if the definition mentions a number; choose "
+            "'approval_required' or 'not_allowed' instead."
         )
     return prompt
 
@@ -311,23 +310,23 @@ def _build_batch_prompt(
         f'"{instructions}"\n\n'
         f"Er hat Zugriff auf die Verbindung '{connection_name}' mit diesen Funktionen: "
         f"{functions}.\n\n"
-        "Schlage für jede Funktion, deren Nutzung laut der Instruction eingeschränkt "
-        "werden sollte (z.B. weil sie dort gar nicht vorkommt, ein Limit genannt wird, "
-        "oder eine Freigabe sinnvoll erscheint), eine Regel vor, indem du "
-        "set_guardrail_interpretations genau einmal aufrufst. Lasse jede Funktion, die "
-        "frei nutzbar bleiben soll, komplett weg."
+        "For every function whose use should be restricted by the instruction "
+        "(for example because it does not appear there, a limit is mentioned, or "
+        "approval seems appropriate), propose a rule by calling "
+        "set_guardrail_interpretations exactly once. Omit every function that "
+        "should remain freely usable."
     )
     if attributes:
         catalog = ", ".join(f"{a.key} ({a.datatype})" for a in attributes)
         prompt += (
-            f" Für 'with_limits' stehen ausschließlich diese Attribute zur Verfügung: "
-            f"{catalog}. Erfinde kein anderes Attribut, und nutze pro Funktion nur die "
-            "Attribute, die tatsächlich zu ihr gehören."
+            f" For 'with_limits' only these attributes are available: "
+            f"{catalog}. Do not invent another attribute, and use only the "
+            "attributes that actually belong to each function."
         )
     else:
         prompt += (
-            " Keine Funktion dieser Verbindung deklariert vergleichbare Attribute -- "
-            "'with_limits' kann daher für keine von ihnen verwendet werden."
+            " No function on this connection declares comparable attributes -- "
+            "'with_limits' cannot be used for any of them."
         )
     return prompt
 

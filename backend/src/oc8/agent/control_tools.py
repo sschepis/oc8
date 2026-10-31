@@ -755,7 +755,14 @@ def offered_tools(
     # execute_control_tool. Withdrawing the tool the moment it activates would
     # strand a model that re-checks its own tool list mid-task with an unknown
     # tool name instead of a harmless "already active" response.
-    offered = [MEMORY_WRITE, RENDER_COMPONENT, FETCH_URL, TODO_WRITE, READ_RUN_FILE]
+    offered = [
+        MEMORY_WRITE,
+        RENDER_COMPONENT,
+        FETCH_URL,
+        REQUEST_DECISION,
+        TODO_WRITE,
+        READ_RUN_FILE,
+    ]
     if offer_write_output_file:
         offered.append(WRITE_OUTPUT_FILE)
     # ASK_USER parks the run and waits for an answer through the SAME door the
@@ -1234,7 +1241,7 @@ async def execute_control_tool(
             tenant_id=tenant_id,
             agent_id=agent.id,
             status="info",
-            message=f"Schlägt nach: {query}",
+            message=f"Searching: {query}",
             detail=(context[:500] or None),
         )
         if not context.strip():
@@ -1242,9 +1249,9 @@ async def execute_control_tool(
             # model with something it made up.
             return ControlOutcome(
                 output=(
-                    "Dazu steht nichts in der Wissensdatenbank. Sage dem Kunden "
-                    "nichts, was du dir selbst zusammenreimst -- frage nach oder "
-                    "gib an einen Menschen ab."
+                    "There is nothing about this in the knowledge base. Do not tell "
+                    "the customer something you invented -- ask a follow-up question "
+                    "or hand it to a human."
                 )
             )
         return ControlOutcome(output=context)
@@ -1677,9 +1684,9 @@ async def execute_control_tool(
             )
             return ControlOutcome(
                 output=(
-                    "Notiert, aber noch NICHT freigegeben: Firmenwissen muss ein "
-                    "Mensch bestaetigen. Handle vorerst nicht danach und nenne es "
-                    "keinem Kunden gegenueber als gesetzt."
+                    "Noted, but NOT approved yet: company knowledge must be confirmed "
+                    "by a human. Do not act on it yet and do not present it to a "
+                    "customer as settled."
                 )
             )
         record = await write_memory(
@@ -1760,8 +1767,8 @@ async def execute_control_tool(
             )
         return ControlOutcome(
             output=(
-                f"Vorschlag erstellt (Proposal {proposal.id}). Ein Mensch muss ihn "
-                "in oc8 bestätigen, bevor er wirksam wird."
+                f"Proposal created ({proposal.id}). A human must confirm it in oc8 "
+                "before it takes effect."
             )
         )
 
